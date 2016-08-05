@@ -155,7 +155,7 @@ public class NinePointView extends View {
                         mCount++;
                         mPointList.add(new PointerMessage(j, i, mCount, true));
                         mMoveX = eachHeight / 2 * (j + 1) + eachHeight / 2 * j;
-                        mMoveX = eachWidth / 2 * (i + 1) + eachWidth / 2 * i;
+                        mMoveY = eachWidth / 2 * (i + 1) + eachWidth / 2 * i;
                         Log.d("NinePointView", "    i:  " + i + "   j:  " + j + "   true");
                     }
                 } else {
@@ -195,7 +195,7 @@ public class NinePointView extends View {
             PointerMessage pointerMessage = mPointList.get(0);
             int yP = pointerMessage.getyPosition();
             int xP = pointerMessage.getxPosition();
-            canvas.drawLine(eachHeight / 2 * (xP + 1) + eachHeight / 2 * xP, eachWidth / 2 * (yP + 1) + eachWidth / 2 * yP, mMoveX, mMoveY, mLinePathPaint);
+             canvas.drawLine(eachHeight / 2 * (xP + 1) + eachHeight / 2 * xP, eachWidth / 2 * (yP + 1) + eachWidth / 2 * yP, mMoveX, mMoveY, mLinePathPaint);
         } else {
             for (int i = 0; i < mPointList.size() - 1; i++) {
                 PointerMessage pointerMessage = mPointList.get(i);
@@ -263,7 +263,7 @@ public class NinePointView extends View {
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 // TODO: 2016/8/4 第一个按下的情况要处理
-                if (!mIsFirstCircleClik){
+                if (!mIsFirstCircleClik) {
                     mPointX = (int) event.getX();
                     mPointY = (int) event.getY();
                     invalidate();
@@ -277,7 +277,7 @@ public class NinePointView extends View {
                 break;
 
             case MotionEvent.ACTION_UP:
-                if(mPointList.size()<=3){
+                if (mPointList.size() <= 3) {
 
                 }
                 break;

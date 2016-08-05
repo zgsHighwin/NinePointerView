@@ -180,42 +180,45 @@ public class NinePointView extends View {
             }
         }
 
-        // 实心小圆的半径
-        int chooseCircleRadius = showCircleRadius / 2;
-        //画三个选中的实心小圆
-        for (int i = 0; i < mPointList.size(); i++) {
-            PointerMessage pointerMessage = mPointList.get(i);
-            int yP = pointerMessage.getyPosition();
-            int xP = pointerMessage.getxPosition();
-            canvas.drawCircle(eachHeight / 2 * (xP + 1) + eachHeight / 2 * xP, eachWidth / 2 * (yP + 1) + eachWidth / 2 * yP, chooseCircleRadius, mChooseCirclePaint);
-        }
-
-        //画连接线
-        if (mPointList.size() == 1) {
-            PointerMessage pointerMessage = mPointList.get(0);
-            int yP = pointerMessage.getyPosition();
-            int xP = pointerMessage.getxPosition();
-             canvas.drawLine(eachHeight / 2 * (xP + 1) + eachHeight / 2 * xP, eachWidth / 2 * (yP + 1) + eachWidth / 2 * yP, mMoveX, mMoveY, mLinePathPaint);
-        } else {
-            for (int i = 0; i < mPointList.size() - 1; i++) {
+        if (!mIsNotMatch) {
+            // 实心小圆的半径
+            int chooseCircleRadius = showCircleRadius / 2;
+            //画三个选中的实心小圆
+            for (int i = 0; i < mPointList.size(); i++) {
                 PointerMessage pointerMessage = mPointList.get(i);
-                PointerMessage pointerMessageNext = mPointList.get(i + 1);
-                canvas.drawLine(eachHeight / 2 * (pointerMessage.getxPosition() + 1) + eachHeight / 2 * pointerMessage.getxPosition(),
-                        eachWidth / 2 * (pointerMessage.getyPosition() + 1) + eachWidth / 2 * pointerMessage.getyPosition(),
-                        eachHeight / 2 * (pointerMessageNext.getxPosition() + 1) + eachHeight / 2 * pointerMessageNext.getxPosition(),
-                        eachWidth / 2 * (pointerMessageNext.getyPosition() + 1) + eachWidth / 2 * pointerMessageNext.getyPosition(),
-                        mLinePathPaint);
+                int yP = pointerMessage.getyPosition();
+                int xP = pointerMessage.getxPosition();
+                canvas.drawCircle(eachHeight / 2 * (xP + 1) + eachHeight / 2 * xP, eachWidth / 2 * (yP + 1) + eachWidth / 2 * yP, chooseCircleRadius, mChooseCirclePaint);
+            }
+
+            //画连接线
+            if (mPointList.size() == 1) {
+                PointerMessage pointerMessage = mPointList.get(0);
+                int yP = pointerMessage.getyPosition();
+                int xP = pointerMessage.getxPosition();
+                canvas.drawLine(eachHeight / 2 * (xP + 1) + eachHeight / 2 * xP, eachWidth / 2 * (yP + 1) + eachWidth / 2 * yP, mMoveX, mMoveY, mLinePathPaint);
+            } else {
+                for (int i = 0; i < mPointList.size() - 1; i++) {
+                    PointerMessage pointerMessage = mPointList.get(i);
+                    PointerMessage pointerMessageNext = mPointList.get(i + 1);
+                    canvas.drawLine(eachHeight / 2 * (pointerMessage.getxPosition() + 1) + eachHeight / 2 * pointerMessage.getxPosition(),
+                            eachWidth / 2 * (pointerMessage.getyPosition() + 1) + eachWidth / 2 * pointerMessage.getyPosition(),
+                            eachHeight / 2 * (pointerMessageNext.getxPosition() + 1) + eachHeight / 2 * pointerMessageNext.getxPosition(),
+                            eachWidth / 2 * (pointerMessageNext.getyPosition() + 1) + eachWidth / 2 * pointerMessageNext.getyPosition(),
+                            mLinePathPaint);
+                }
+            }
+
+            if (mPointList.size() != 0) {
+                PointerMessage pointListLast = mPointList.getLast();
+                if (mPointList.size() != baseNumber * baseNumber) {
+                    canvas.drawLine(eachHeight / 2 * (pointListLast.getxPosition() + 1) + eachHeight / 2 * pointListLast.getxPosition(),
+                            eachWidth / 2 * (pointListLast.getyPosition() + 1) + eachWidth / 2 * pointListLast.getyPosition(),
+                            mMoveX, mMoveY, mLinePathPaint);
+                }
             }
         }
 
-        if (mPointList.size() != 0) {
-            PointerMessage pointListLast = mPointList.getLast();
-            if (mPointList.size() != baseNumber * baseNumber) {
-                canvas.drawLine(eachHeight / 2 * (pointListLast.getxPosition() + 1) + eachHeight / 2 * pointListLast.getxPosition(),
-                        eachWidth / 2 * (pointListLast.getyPosition() + 1) + eachWidth / 2 * pointListLast.getyPosition(),
-                        mMoveX, mMoveY, mLinePathPaint);
-            }
-        }
 
         //画横向三条直线
         for (int i = 0; i < baseNumber - 1; i++) {
@@ -257,13 +260,20 @@ public class NinePointView extends View {
 
     private int mCount;
 
+    private boolean mIsNotMatch;
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
 
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 // TODO: 2016/8/4 第一个按下的情况要处理
+                if (mIsNotMatch) {
+                    mIsFirstCircleClik = false;
+                }
                 if (!mIsFirstCircleClik) {
+                    mPointList.clear();
+                    mIsNotMatch = false;
                     mPointX = (int) event.getX();
                     mPointY = (int) event.getY();
                     invalidate();
@@ -271,6 +281,7 @@ public class NinePointView extends View {
                 break;
 
             case MotionEvent.ACTION_MOVE:
+                mIsNotMatch = false;
                 mMoveX = (int) event.getX();
                 mMoveY = (int) event.getY();
                 invalidate();
@@ -278,7 +289,13 @@ public class NinePointView extends View {
 
             case MotionEvent.ACTION_UP:
                 if (mPointList.size() <= 3) {
-
+                    mPointList.clear();
+                    mIsNotMatch = true;
+                    invalidate();
+                    mIsFirstCircleClik = false;
+                } else {
+                    mIsNotMatch = false;
+                    invalidate();
                 }
                 break;
 

@@ -13,8 +13,7 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedList;
 
 public class NinePointView extends View {
     private Paint mBackgroundPaint;
@@ -22,7 +21,8 @@ public class NinePointView extends View {
     private Paint mLinePaint;
     private Paint mChooseCirclePaint;
     private Paint mLinePathPaint;
-    private boolean[] mLinkedCircle;
+
+    private boolean mIsFirstCircleClik;
 
     public NinePointView(Context context) {
         this(context, null);
@@ -114,8 +114,8 @@ public class NinePointView extends View {
     //几乘几的图形
     private int baseNumber = 3;
 
-    private boolean[][] mIsLInkedCircle = new boolean[3][3];
-    private List<Boolean[][]> mPathList = new ArrayList<>();
+    // private boolean[][] mIsLInkedCircle = new boolean[3][3];
+    private LinkedList<PointerMessage> mPointList = new LinkedList<>();
 
     public int getBaseNumber() {
         return baseNumber;
@@ -136,6 +136,8 @@ public class NinePointView extends View {
         int eachWidth = getWidth() / baseNumber; //每个部分占据的高度
         int eachHeight = getHeight() / baseNumber;   //每个部分占据的高度
 
+        boolean hasMore = false;
+
         //显示圆的半径
         int showCircleRadius = eachWidth / 4;
         //绘制显示圆
@@ -143,28 +145,77 @@ public class NinePointView extends View {
             for (int j = 0; j < baseNumber; j++) {
                 int xCenter = eachWidth / 2 * (j + 1) + eachWidth / 2 * j; //圆心x坐标
                 int yCenter = eachHeight / 2 * (i + 1) + eachHeight / 2 * i; //圆心y坐标
-                if (mPointX > xCenter - showCircleRadius && mPointX < xCenter + showCircleRadius
-                        && mPointY > yCenter - showCircleRadius && mPointY < yCenter + showCircleRadius) {
-                    mIsLInkedCircle[i][j] = true;
-                    Log.d("NinePointView", "    i:  " + i + "   j:  " + j + "   true");
-                }
                 Log.d("NinePointView", "    i:  " + i + "   j:  " + j + "   false");
                 canvas.drawCircle(xCenter, yCenter, showCircleRadius, mShowCirclePaint);
+                //表示在显示圆的内部
+                if (!mIsFirstCircleClik) {
+                    if (mPointX > xCenter - showCircleRadius && mPointX < xCenter + showCircleRadius
+                            && mPointY > yCenter - showCircleRadius && mPointY < yCenter + showCircleRadius) {
+                        mIsFirstCircleClik = true;
+                        mCount++;
+                        mPointList.add(new PointerMessage(j, i, mCount, true));
+                        mMoveX = eachHeight / 2 * (j + 1) + eachHeight / 2 * j;
+                        mMoveX = eachWidth / 2 * (i + 1) + eachWidth / 2 * i;
+                        Log.d("NinePointView", "    i:  " + i + "   j:  " + j + "   true");
+                    }
+                } else {
+                    if (mMoveX > xCenter - showCircleRadius && mMoveX < xCenter + showCircleRadius
+                            && mMoveY > yCenter - showCircleRadius && mMoveY < yCenter + showCircleRadius) {
+                        for (int k = 0; k < mPointList.size(); k++) {
+                            PointerMessage pointerMessage = mPointList.get(k);
+                            int jj = pointerMessage.getxPosition();
+                            int ii = pointerMessage.getyPosition();
+                            if (i == ii && j == jj) {
+                                hasMore = true;
+                            }
+                        }
+                        if (hasMore) {
+                            continue;
+                        }
+                        mCount++;
+                        mPointList.add(new PointerMessage(j, i, mCount, true));
+                        Log.d("NinePointView", "    i:  " + i + "   j:  " + j + "   true");
+                    }
+                }
             }
         }
 
         // 实心小圆的半径
         int chooseCircleRadius = showCircleRadius / 2;
         //画三个选中的实心小圆
-        for (int i = 0; i < baseNumber; i++) {
-            for (int j = 0; j < baseNumber; j++) {
-                if (mIsLInkedCircle[i][j]) {
-                    canvas.drawCircle(eachWidth / 2 * (j + 1) + eachWidth / 2 * j, eachHeight / 2 * (i + 1) + eachHeight / 2 * i, chooseCircleRadius, mChooseCirclePaint);
-                    continue;
-                }
+        for (int i = 0; i < mPointList.size(); i++) {
+            PointerMessage pointerMessage = mPointList.get(i);
+            int yP = pointerMessage.getyPosition();
+            int xP = pointerMessage.getxPosition();
+            canvas.drawCircle(eachHeight / 2 * (xP + 1) + eachHeight / 2 * xP, eachWidth / 2 * (yP + 1) + eachWidth / 2 * yP, chooseCircleRadius, mChooseCirclePaint);
+        }
+
+        //画连接线
+        if (mPointList.size() == 1) {
+            PointerMessage pointerMessage = mPointList.get(0);
+            int yP = pointerMessage.getyPosition();
+            int xP = pointerMessage.getxPosition();
+            canvas.drawLine(eachHeight / 2 * (xP + 1) + eachHeight / 2 * xP, eachWidth / 2 * (yP + 1) + eachWidth / 2 * yP, mMoveX, mMoveY, mLinePathPaint);
+        } else {
+            for (int i = 0; i < mPointList.size() - 1; i++) {
+                PointerMessage pointerMessage = mPointList.get(i);
+                PointerMessage pointerMessageNext = mPointList.get(i + 1);
+                canvas.drawLine(eachHeight / 2 * (pointerMessage.getxPosition() + 1) + eachHeight / 2 * pointerMessage.getxPosition(),
+                        eachWidth / 2 * (pointerMessage.getyPosition() + 1) + eachWidth / 2 * pointerMessage.getyPosition(),
+                        eachHeight / 2 * (pointerMessageNext.getxPosition() + 1) + eachHeight / 2 * pointerMessageNext.getxPosition(),
+                        eachWidth / 2 * (pointerMessageNext.getyPosition() + 1) + eachWidth / 2 * pointerMessageNext.getyPosition(),
+                        mLinePathPaint);
             }
         }
 
+        if (mPointList.size() != 0) {
+            PointerMessage pointListLast = mPointList.getLast();
+            if (mPointList.size() != baseNumber * baseNumber) {
+                canvas.drawLine(eachHeight / 2 * (pointListLast.getxPosition() + 1) + eachHeight / 2 * pointListLast.getxPosition(),
+                        eachWidth / 2 * (pointListLast.getyPosition() + 1) + eachWidth / 2 * pointListLast.getyPosition(),
+                        mMoveX, mMoveY, mLinePathPaint);
+            }
+        }
 
         //画横向三条直线
         for (int i = 0; i < baseNumber - 1; i++) {
@@ -184,14 +235,8 @@ public class NinePointView extends View {
             canvas.drawLine(eachWidth * (i + 1), strokeWidth, eachWidth * (i + 1), getHeight() - strokeWidth, mLinePaint);
         }
 
+        Log.d("NinePointView", "mPointList.size():" + mPointList.size());
 
-        for (int i = 0; i < mIsLInkedCircle.length; i++) {
-            for (int j = 0; j < mIsLInkedCircle[i].length; j++) {
-                Log.d("NinePointView", "mIsLInkedCircle[i][j]:" + mIsLInkedCircle[i][j]);
-            }
-        }
-
-        canvas.drawLine(getStartX(), getStartY(), mMoveX, mMoveY, mLinePathPaint);
     }
 
     private float getStartY() {
@@ -210,27 +255,83 @@ public class NinePointView extends View {
     private int mMoveX;
     private int mMoveY;
 
+    private int mCount;
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
 
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                mPointX = (int) event.getX();
-                mPointY = (int) event.getY();
-                invalidate();
+                // TODO: 2016/8/4 第一个按下的情况要处理
+                if (!mIsFirstCircleClik){
+                    mPointX = (int) event.getX();
+                    mPointY = (int) event.getY();
+                    invalidate();
+                }
                 break;
 
             case MotionEvent.ACTION_MOVE:
                 mMoveX = (int) event.getX();
                 mMoveY = (int) event.getY();
-
+                invalidate();
                 break;
 
             case MotionEvent.ACTION_UP:
+                if(mPointList.size()<=3){
 
+                }
                 break;
 
         }
         return true;
+    }
+
+    /**
+     * 保存点的信息
+     */
+    private class PointerMessage {
+        private int xPosition;
+        private int yPosition;
+        private int mCount;
+        private boolean isChoose;
+
+        public PointerMessage(int xPosition, int yPosition, int mCount, boolean isChoose) {
+            this.xPosition = xPosition;
+            this.yPosition = yPosition;
+            this.mCount = mCount;
+            this.isChoose = isChoose;
+        }
+
+        public boolean isChoose() {
+            return isChoose;
+        }
+
+        public void setChoose(boolean choose) {
+            isChoose = choose;
+        }
+
+        public int getxPosition() {
+            return xPosition;
+        }
+
+        public void setxPosition(int xPosition) {
+            this.xPosition = xPosition;
+        }
+
+        public int getyPosition() {
+            return yPosition;
+        }
+
+        public void setyPosition(int yPosition) {
+            this.yPosition = yPosition;
+        }
+
+        public int getmCount() {
+            return mCount;
+        }
+
+        public void setmCount(int mCount) {
+            this.mCount = mCount;
+        }
     }
 }

@@ -14,6 +14,7 @@ import android.view.MotionEvent;
 import android.view.View;
 
 import java.util.LinkedList;
+import java.util.Random;
 
 public class NinePointView extends View {
     private Paint mBackgroundPaint;
@@ -76,7 +77,7 @@ public class NinePointView extends View {
         mLinePathPaint.setStyle(Paint.Style.STROKE);
         mLinePathPaint.setStrokeWidth(strokeWidth);
         mLinePathPaint.setStrokeWidth(30);
-        mLinePathPaint.setColor(Color.RED);
+        //   mLinePathPaint.setColor(Color.RED);
         mLinePathPaint.setStrokeCap(Paint.Cap.ROUND);
         mLinePathPaint.setStrokeJoin(Paint.Join.ROUND);
     }
@@ -126,25 +127,31 @@ public class NinePointView extends View {
         invalidate();
     }
 
-
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+
+
+
         RectF backGroundRectF = new RectF(0, 0, getWidth(), getHeight());
         mBackgroundPaint.setShader(new SweepGradient(getWidth() / 2, getHeight() / 2, new int[]{Color.YELLOW, Color.GREEN, Color.RED, Color.BLUE, Color.YELLOW}, null));
         canvas.drawRoundRect(backGroundRectF, 5, 5, mBackgroundPaint);
-        int eachWidth = getWidth() / baseNumber; //每个部分占据的高度
-        int eachHeight = getHeight() / baseNumber;   //每个部分占据的高度
+        float eachWidth = 0f;
+        float eachHeight = 0f;
+        if (baseNumber != 0) {
+            eachWidth = (getWidth() + 0f) / baseNumber; //每个部分占据的高度
+            eachHeight = (getHeight() + 0f) / baseNumber;   //每个部分占据的高度
+        }
 
         boolean hasMore = false;
 
         //显示圆的半径
-        int showCircleRadius = eachWidth / 4;
+        float showCircleRadius = eachWidth / 4;
         //绘制显示圆
         for (int i = 0; i < baseNumber; i++) {
             for (int j = 0; j < baseNumber; j++) {
-                int xCenter = eachWidth / 2 * (j + 1) + eachWidth / 2 * j; //圆心x坐标
-                int yCenter = eachHeight / 2 * (i + 1) + eachHeight / 2 * i; //圆心y坐标
+                float xCenter = eachWidth / 2 * (j + 1) + eachWidth / 2 * j; //圆心x坐标
+                float yCenter = eachHeight / 2 * (i + 1) + eachHeight / 2 * i; //圆心y坐标
                 Log.d("NinePointView", "    i:  " + i + "   j:  " + j + "   false");
                 canvas.drawCircle(xCenter, yCenter, showCircleRadius, mShowCirclePaint);
                 //表示在显示圆的内部
@@ -181,14 +188,42 @@ public class NinePointView extends View {
         }
 
         if (!mIsNotMatch) {
+            int[] colors = null;
+            float[] floats = null;
+            if (baseNumber != 0) {
+                colors = new int[baseNumber];
+                for (int i = 0; i < colors.length; i++) {
+                    Random random = new Random();
+                    String r, g, b;
+                    r = Integer.toHexString(random.nextInt(256)).toUpperCase();
+                    g = Integer.toHexString(random.nextInt(256)).toUpperCase();
+                    b = Integer.toHexString(random.nextInt(256)).toUpperCase();
+
+                    r = r.length() == 1 ? "0" + r : r;
+                    g = g.length() == 1 ? "0" + g : g;
+                    b = b.length() == 1 ? "0" + b : b;
+                    colors[i] = Color.parseColor("#" + r + g + b);
+                }
+
+                floats = new float[baseNumber];
+                for (int i = 0; i < floats.length; i++) {
+                    floats[i] = 1f / baseNumber * (i + 1);
+                }
+            }
+
             // 实心小圆的半径
-            int chooseCircleRadius = showCircleRadius / 2;
+            float chooseCircleRadius = showCircleRadius / 2;
             //画三个选中的实心小圆
             for (int i = 0; i < mPointList.size(); i++) {
                 PointerMessage pointerMessage = mPointList.get(i);
                 int yP = pointerMessage.getyPosition();
                 int xP = pointerMessage.getxPosition();
                 canvas.drawCircle(eachHeight / 2 * (xP + 1) + eachHeight / 2 * xP, eachWidth / 2 * (yP + 1) + eachWidth / 2 * yP, chooseCircleRadius, mChooseCirclePaint);
+                if (mOnNinePointViewChangeListener != null) {
+                    if (mPointList != null) {
+                        mOnNinePointViewChangeListener.onChange(mPointList, baseNumber * baseNumber, mPointList.size());
+                    }
+                }
             }
 
             //画连接线
@@ -196,11 +231,19 @@ public class NinePointView extends View {
                 PointerMessage pointerMessage = mPointList.get(0);
                 int yP = pointerMessage.getyPosition();
                 int xP = pointerMessage.getxPosition();
-                canvas.drawLine(eachHeight / 2 * (xP + 1) + eachHeight / 2 * xP, eachWidth / 2 * (yP + 1) + eachWidth / 2 * yP, mMoveX, mMoveY, mLinePathPaint);
+                mLinePathPaint.setShader(new LinearGradient(eachHeight / 2 * (xP + 1) + eachHeight / 2 * xP,
+                        eachWidth / 2 * (yP + 1) + eachWidth / 2 * yP, mMoveX,
+                        mMoveY, colors, floats, Shader.TileMode.MIRROR));
+                canvas.drawLine(eachHeight / 2 * (xP + 1) + eachHeight / 2 * xP, eachWidth / 2 * (yP + 1) + eachWidth / 2 * yP,
+                        mMoveX, mMoveY, mLinePathPaint);
             } else {
                 for (int i = 0; i < mPointList.size() - 1; i++) {
                     PointerMessage pointerMessage = mPointList.get(i);
                     PointerMessage pointerMessageNext = mPointList.get(i + 1);
+                    mLinePathPaint.setShader(new LinearGradient(eachHeight / 2 * (pointerMessage.getxPosition() + 1) + eachHeight / 2 * pointerMessage.getxPosition(),
+                            eachWidth / 2 * (pointerMessage.getyPosition() + 1) + eachWidth / 2 * pointerMessage.getyPosition(),
+                            eachHeight / 2 * (pointerMessageNext.getxPosition() + 1) + eachHeight / 2 * pointerMessageNext.getxPosition(),
+                            eachWidth / 2 * (pointerMessageNext.getyPosition() + 1) + eachWidth / 2 * pointerMessageNext.getyPosition(), colors, floats, Shader.TileMode.MIRROR));
                     canvas.drawLine(eachHeight / 2 * (pointerMessage.getxPosition() + 1) + eachHeight / 2 * pointerMessage.getxPosition(),
                             eachWidth / 2 * (pointerMessage.getyPosition() + 1) + eachWidth / 2 * pointerMessage.getyPosition(),
                             eachHeight / 2 * (pointerMessageNext.getxPosition() + 1) + eachHeight / 2 * pointerMessageNext.getxPosition(),
@@ -212,6 +255,9 @@ public class NinePointView extends View {
             if (mPointList.size() != 0) {
                 PointerMessage pointListLast = mPointList.getLast();
                 if (mPointList.size() != baseNumber * baseNumber) {
+                    mLinePathPaint.setShader(new LinearGradient(eachHeight / 2 * (pointListLast.getxPosition() + 1) + eachHeight / 2 * pointListLast.getxPosition(),
+                            eachWidth / 2 * (pointListLast.getyPosition() + 1) + eachWidth / 2 * pointListLast.getyPosition(),
+                            mMoveX, mMoveY, colors, floats, Shader.TileMode.MIRROR));
                     canvas.drawLine(eachHeight / 2 * (pointListLast.getxPosition() + 1) + eachHeight / 2 * pointListLast.getxPosition(),
                             eachWidth / 2 * (pointListLast.getyPosition() + 1) + eachWidth / 2 * pointListLast.getyPosition(),
                             mMoveX, mMoveY, mLinePathPaint);
@@ -251,16 +297,46 @@ public class NinePointView extends View {
     }
 
     //第一次点下去的坐标
-    private int mPointX;
-    private int mPointY;
+    private float mPointX;
+    private float mPointY;
 
     //移动的坐标
-    private int mMoveX;
-    private int mMoveY;
+    private float mMoveX;
+    private float mMoveY;
 
     private int mCount;
 
     private boolean mIsNotMatch;
+
+    /**
+     * 清理数据
+     */
+    public void clear() {
+        mPointList.clear();
+        mIsNotMatch = false;
+        if (mPointList != null) {
+            mPointList.clear();
+        }
+        invalidate();
+    }
+
+    /**
+     * 获取选中的个数
+     *
+     * @return
+     */
+    public int getChooseNumber() {
+        return mCount;
+    }
+
+    /**
+     * 获取当前总共的个数
+     *
+     * @return
+     */
+    public int getTotalCount() {
+        return baseNumber * baseNumber;
+    }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
@@ -274,16 +350,16 @@ public class NinePointView extends View {
                 if (!mIsFirstCircleClik) {
                     mPointList.clear();
                     mIsNotMatch = false;
-                    mPointX = (int) event.getX();
-                    mPointY = (int) event.getY();
+                    mPointX = event.getX();
+                    mPointY = event.getY();
                     invalidate();
                 }
                 break;
 
             case MotionEvent.ACTION_MOVE:
                 mIsNotMatch = false;
-                mMoveX = (int) event.getX();
-                mMoveY = (int) event.getY();
+                mMoveX = event.getX();
+                mMoveY = event.getY();
                 invalidate();
                 break;
 
@@ -291,25 +367,36 @@ public class NinePointView extends View {
                 if (mPointList.size() <= 3) {
                     mPointList.clear();
                     mIsNotMatch = true;
-                    invalidate();
-                    mIsFirstCircleClik = false;
                 } else {
                     mIsNotMatch = false;
-                    invalidate();
                 }
+                invalidate();
                 break;
 
         }
         return true;
     }
 
+
     /**
      * 保存点的信息
      */
-    private class PointerMessage {
+    public class PointerMessage {
+        /**
+         * 保存x轴的信息
+         */
         private int xPosition;
+        /**
+         * 保存y轴的信息
+         */
         private int yPosition;
+        /**
+         * 当前计数的总数
+         */
         private int mCount;
+        /**
+         * 是否被选中
+         */
         private boolean isChoose;
 
         public PointerMessage(int xPosition, int yPosition, int mCount, boolean isChoose) {
@@ -350,5 +437,19 @@ public class NinePointView extends View {
         public void setmCount(int mCount) {
             this.mCount = mCount;
         }
+    }
+
+    private OnNinePointViewChangeListener mOnNinePointViewChangeListener;
+
+    public OnNinePointViewChangeListener getOnNinePointViewChangeListener() {
+        return mOnNinePointViewChangeListener;
+    }
+
+    public void setOnNinePointViewChangeListener(OnNinePointViewChangeListener onNinePointViewChangeListener) {
+        mOnNinePointViewChangeListener = onNinePointViewChangeListener;
+    }
+
+    public interface OnNinePointViewChangeListener {
+        void onChange(LinkedList<PointerMessage> pointerMessages, int total, int selectCount);
     }
 }
